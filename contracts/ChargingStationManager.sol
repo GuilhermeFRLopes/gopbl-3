@@ -1,106 +1,212 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract ChargingStationManager {
-    // Estrutura para representar um Posto de Recarga
-    struct ChargingStation {
-        string id;             // ID único do posto (ex: "posto-shell-001")
-        string nome;           // Nome/descrição
-        string cidade;         // Cidade do posto
-        address proprietario;  // Endereço da conta que cadastrou/gerencia o posto
-        bool disponivel;       // true se disponível, false se reservado/ocupado
-        uint256 ultimaAtualizacao; // Timestamp da última atualização (Unix)
-        address veiculoReservador; // Endereço do veículo que reservou o posto (address(0) se não reservado)
+contract GerenciadorPostos {
+    struct Posto {
+        string id;
+        string nome;
+        string cidade;
+        address proprietario;
+        bool disponivel;
+        uint256 ultimaAtualizacao;
+        address veiculoReservador;
     }
 
-    // Mapeamento de ID do posto para sua estrutura ChargingStation
-    mapping(string => ChargingStation) public chargingStations;
-
-    // Array para armazenar todos os IDs de postos cadastrados (para iteração)
-    string[] public stationIds;
-
-    // Eventos para notificar sobre mudanças no estado da blockchain
-    event StationRegistered(string indexed stationId, address indexed owner, string city);
-    event StationAvailabilityUpdated(string indexed stationId, bool newAvailability, address indexed reservor, uint256 timestamp);
-    event StationDeleted(string indexed stationId);
-
-    // Constructor (opcional, para inicialização)
-    constructor() {
-        // Inicializações podem ser feitas aqui, se necessário
+    struct Reserva {
+        string idPosto;
+        address veiculo;
+        uint256 timestamp;
     }
 
-    // Função para cadastrar um novo posto de recarga
-    function registerStation(string memory _id, string memory _nome, string memory _cidade) public {
-        require(bytes(chargingStations[_id].id).length == 0, "Charging station already registered."); // Verifica se o ID já existe
-        
-        stationIds.push(_id); // Adiciona o ID ao array de IDs
-        chargingStations[_id] = ChargingStation(
-            _id,
-            _nome,
-            _cidade,
-            msg.sender, // Quem chamou a função é o proprietário
-            true,       // Inicialmente disponível
-            block.timestamp,
-            address(0) // Ninguém reservou ainda
+    struct Recarga {
+        string idPosto;
+        address veiculo;
+        uint256 kWh;
+        uint256 valor;
+        uint256 timestamp;
+    }
+
+    struct Pagamento {
+        string idPosto;
+        address veiculo;
+        uint256 valor;
+        uint256 timestamp;
+    }
+
+    // --- Disputa descentralizada entre empresas ---
+    enum StatusDisputa { Nenhuma, Aberta, Resolvida }
+    struct Disputa {
+        string idPosto;
+        address empresaRequerente;
+        string motivo;
+        uint256 votosAFavor;
+        uint256 votosContra;
+        StatusDisputa status;
+        mapping(address => bool) votou;
+        address[] votantes;
+        address vencedora; // empresa vencedora da disputa
+    }
+
+    mapping(string => Posto) public postos;
+    string[] public listaIdsPostos;
+    mapping(address => string[]) public postosPorEmpresa;
+
+    Reserva[] public historicoReservas;
+    Recarga[] public historicoRecargas;
+    Pagamento[] public historicoPagamentos;
+
+    mapping(string => Disputa) public disputas; // disputa por id do posto
+    string[] public listaDisputas;
+
+    event PostoCadastrado(string idPosto, address proprietario, string cidade);
+    event ReservaEfetuada(string idPosto, address veiculo, uint256 timestamp);
+    event RecargaEfetuada(string idPosto, address veiculo, uint256 kWh, uint256 valor, uint256 timestamp);
+    event PagamentoEfetuado(string idPosto, address veiculo, uint256 valor, uint256 timestamp);
+    event DisputaAberta(string idPosto, address empresa, string motivo);
+    event VotoRegistrado(string idPosto, address empresa, bool aFavor);
+    event DisputaResolvida(string idPosto, address vencedora);
+
+    function cadastrarPosto(string memory _id, string memory _nome, string memory _cidade) public {
+        require(bytes(postos[_id].id).length == 0, "Posto já cadastrado.");
+        postos[_id] = Posto(_id, _nome, _cidade, msg.sender, true, block.timestamp, address(0));
+        listaIdsPostos.push(_id);
+        postosPorEmpresa[msg.sender].push(_id);
+        emit PostoCadastrado(_id, msg.sender, _cidade);
+    }
+
+    function reservarPosto(string memory _id) public {
+        require(bytes(postos[_id].id).length > 0, "Posto inexistente.");
+        require(postos[_id].disponivel, "Posto já reservado.");
+        postos[_id].disponivel = false;
+        postos[_id].veiculoReservador = msg.sender;
+        postos[_id].ultimaAtualizacao = block.timestamp;
+        historicoReservas.push(Reserva(_id, msg.sender, block.timestamp));
+        emit ReservaEfetuada(_id, msg.sender, block.timestamp);
+    }
+
+    function liberarPosto(string memory _id) public {
+        require(bytes(postos[_id].id).length > 0, "Posto inexistente.");
+        require(!postos[_id].disponivel, "Posto já está disponível.");
+        require(postos[_id].veiculoReservador == msg.sender, "Apenas o veículo que reservou pode liberar.");
+        postos[_id].disponivel = true;
+        postos[_id].veiculoReservador = address(0);
+        postos[_id].ultimaAtualizacao = block.timestamp;
+    }
+
+    function registrarRecarga(string memory _id, uint256 _kWh, uint256 _valor) public {
+        require(bytes(postos[_id].id).length > 0, "Posto inexistente.");
+        require(!postos[_id].disponivel, "Posto deve estar reservado.");
+        require(postos[_id].veiculoReservador == msg.sender, "Apenas o veículo que reservou pode registrar recarga.");
+        historicoRecargas.push(Recarga(_id, msg.sender, _kWh, _valor, block.timestamp));
+        emit RecargaEfetuada(_id, msg.sender, _kWh, _valor, block.timestamp);
+    }
+
+    function registrarPagamento(string memory _id, uint256 _valor) public {
+        require(bytes(postos[_id].id).length > 0, "Posto inexistente.");
+        require(!postos[_id].disponivel, "Posto deve estar reservado.");
+        require(postos[_id].veiculoReservador == msg.sender, "Apenas o veículo que reservou pode pagar.");
+        historicoPagamentos.push(Pagamento(_id, msg.sender, _valor, block.timestamp));
+        emit PagamentoEfetuado(_id, msg.sender, _valor, block.timestamp);
+    }
+
+    function consultarPostosPorEmpresa(address _empresa) public view returns (string[] memory) {
+        return postosPorEmpresa[_empresa];
+    }
+
+    function consultarHistoricoReservas() public view returns (Reserva[] memory) {
+        return historicoReservas;
+    }
+
+    function consultarHistoricoRecargas() public view returns (Recarga[] memory) {
+        return historicoRecargas;
+    }
+
+    function consultarHistoricoPagamentos() public view returns (Pagamento[] memory) {
+        return historicoPagamentos;
+    }
+
+    function consultarPosto(string memory _id) public view returns (Posto memory) {
+        require(bytes(postos[_id].id).length > 0, "Posto inexistente.");
+        return postos[_id];
+    }
+
+    function consultarTodosPostos() public view returns (string[] memory) {
+        return listaIdsPostos;
+    }
+
+    // Abrir disputa por um posto
+    function abrirDisputa(string memory _idPosto, string memory _motivo) public {
+        require(bytes(postos[_idPosto].id).length > 0, "Posto inexistente.");
+        require(disputas[_idPosto].status != StatusDisputa.Aberta, "Já existe disputa aberta para este posto.");
+        Disputa storage d = disputas[_idPosto];
+        d.idPosto = _idPosto;
+        d.empresaRequerente = msg.sender;
+        d.motivo = _motivo;
+        d.votosAFavor = 0;
+        d.votosContra = 0;
+        d.status = StatusDisputa.Aberta;
+        d.vencedora = address(0);
+        delete d.votantes;
+        listaDisputas.push(_idPosto);
+        emit DisputaAberta(_idPosto, msg.sender, _motivo);
+    }
+
+    // Votar em uma disputa (apenas empresas que possuem pelo menos um posto)
+    function votarDisputa(string memory _idPosto, bool aFavor) public {
+        require(disputas[_idPosto].status == StatusDisputa.Aberta, "Disputa não está aberta.");
+        require(possuiPosto(msg.sender), "Só empresas com posto podem votar.");
+        Disputa storage d = disputas[_idPosto];
+        require(!d.votou[msg.sender], "Empresa já votou nesta disputa.");
+        d.votou[msg.sender] = true;
+        d.votantes.push(msg.sender);
+        if (aFavor) {
+            d.votosAFavor++;
+        } else {
+            d.votosContra++;
+        }
+        emit VotoRegistrado(_idPosto, msg.sender, aFavor);
+    }
+
+    // Resolver disputa (qualquer um pode chamar, resultado por maioria simples)
+    function resolverDisputa(string memory _idPosto) public {
+        Disputa storage d = disputas[_idPosto];
+        require(d.status == StatusDisputa.Aberta, "Disputa não está aberta.");
+        require(d.votantes.length > 0, "Nenhum voto registrado.");
+        if (d.votosAFavor > d.votosContra) {
+            d.vencedora = d.empresaRequerente;
+        } else {
+            d.vencedora = postos[_idPosto].proprietario;
+        }
+        d.status = StatusDisputa.Resolvida;
+        emit DisputaResolvida(_idPosto, d.vencedora);
+    }
+
+    // Consultar status da disputa
+    function consultarDisputa(string memory _idPosto) public view returns (
+        string memory idPosto,
+        address empresaRequerente,
+        string memory motivo,
+        uint256 votosAFavor,
+        uint256 votosContra,
+        StatusDisputa status,
+        address vencedora,
+        address[] memory votantes
+    ) {
+        Disputa storage d = disputas[_idPosto];
+        return (
+            d.idPosto,
+            d.empresaRequerente,
+            d.motivo,
+            d.votosAFavor,
+            d.votosContra,
+            d.status,
+            d.vencedora,
+            d.votantes
         );
-
-        emit StationRegistered(_id, msg.sender, _cidade);
     }
 
-    // Função para reservar/liberar um posto de recarga
-    function updateStationAvailability(string[] memory _stationIds, bool _reservar, address _veiculoId) public {
-        require(_stationIds.length > 0, "No station IDs provided.");
-
-        for (uint i = 0; i < _stationIds.length; i++) {
-            string memory stationId = _stationIds[i];
-            ChargingStation storage station = chargingStations[stationId];
-
-            require(bytes(station.id).length > 0, "Station does not exist."); // Verifica se o posto existe
-
-            if (_reservar) {
-                // Lógica para reservar
-                require(station.disponivel == true, "Station is already reserved.");
-                station.disponivel = false;
-                station.veiculoReservador = _veiculoId;
-            } else {
-                // Lógica para liberar
-                require(station.disponivel == false, "Station is already available.");
-                // Opcional: require(station.veiculoReservador == _veiculoId, "Only the reserving vehicle can release.");
-                station.disponivel = true;
-                station.veiculoReservador = address(0);
-            }
-            station.ultimaAtualizacao = block.timestamp;
-
-            emit StationAvailabilityUpdated(stationId, station.disponivel, _veiculoId, block.timestamp);
-        }
-    }
-
-    // Função para consultar a disponibilidade de um posto (view function, não custa gás)
-    function getStationAvailability(string memory _id) public view returns (bool, address, uint256) {
-        ChargingStation storage station = chargingStations[_id];
-        require(bytes(station.id).length > 0, "Station does not exist.");
-        return (station.disponivel, station.veiculoReservador, station.ultimaAtualizacao);
-    }
-
-    // Função para obter todos os IDs de postos (para facilitar a consulta off-chain)
-    function getAllStationIds() public view returns (string[] memory) {
-        return stationIds;
-    }
-
-    // Função para deletar um posto (opcional, com controle de acesso)
-    function deleteStation(string memory _id) public {
-        // Exemplo: Somente o proprietário ou um admin pode deletar
-        require(msg.sender == chargingStations[_id].proprietario, "Only the owner can delete this station.");
-        
-        // Remove do array de IDs
-        for (uint i = 0; i < stationIds.length; i++) {
-            if (keccak256(abi.encodePacked(stationIds[i])) == keccak256(abi.encodePacked(_id))) {
-                stationIds[i] = stationIds[stationIds.length - 1];
-                stationIds.pop();
-                break;
-            }
-        }
-        delete chargingStations[_id]; // Remove do mapeamento
-        emit StationDeleted(_id);
+    // Verifica se o endereço possui pelo menos um posto
+    function possuiPosto(address empresa) internal view returns (bool) {
+        return postosPorEmpresa[empresa].length > 0;
     }
 }
