@@ -8,32 +8,35 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"strings" // Adicione esta importação se não estiver lá
 
-	blockchain_contracts "gopbl-3/contracts" // Ajuste para o seu caminho real
+	// Adicione esta importação se não estiver lá
+	abi_contracts "gopbl-3/contratos" // Ajuste para o caminho real do arquivo Go gerado pelo abigen
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 func main() {
 	// --- CONFIGURAÇÕES ---
-	// SUBSTITUA PELA SUA CHAVE PRIVADA (da conta com ETH de teste na Sepolia)
-	privateKeyHex := os.Getenv("0x34009605e23e913ddcd731063e3aa8b37a014a6494441a43e64f549cab704589")
+	// privateKeyHex agora lê da variável de ambiente "ETHEREUM_PRIVATE_KEY"
+	privateKeyHex := os.Getenv("ETHEREUM_PRIVATE_KEY")
 	if privateKeyHex == "" {
-		log.Fatal("Variável de ambiente ETHEREUM_PRIVATE_KEY não configurada.")
+		// Se a variável de ambiente não estiver definida, use uma chave privada de uma conta do Ganache diretamente AQUI para teste
+		// EXTREMAMENTE IMPORTANTE: NUNCA FAÇA ISSO COM CHAVES DE PRODUÇÃO.
+		// Para teste local, é aceitável para conveniência.
+		privateKeyHex = "ea2065708f76ee266d034c4d1bf9767acc80ced14346955c9402385bc212c34b" // Ex: 4f3edf983ad256c709e6a10f1723ad2eeaec49c9fda382894563704043b075ff
+		log.Println("Usando chave privada diretamente no código para teste local. Use variáveis de ambiente em produção!")
 	}
 
-	// SUBSTITUA PELO SEU ENDPOINT INFURA DA REDE SEPOLIA
-	infuraURL := os.Getenv("https://sepolia.infura.io/v3/8ce7834b4e0f4f9c8eb42d2012df9ec3")
+	// infuraURL agora lê da variável de ambiente "INFURA_SEPOLIA_URL"
+	infuraURL := os.Getenv("INFURA_SEPOLIA_URL") // <-- CORRIGIDO AQUI!
 	if infuraURL == "" {
-		log.Fatal("Variável de ambiente INFURA_SEPOLIA_URL não configurada.")
+		infuraURL = "HTTP://127.0.0.1:7545"
+		//log.Fatal("Variável de ambiente INFURA_SEPOLIA_URL não configurada. Por favor, defina-a no terminal antes de executar (ex: set INFURA_SEPOLIA_URL=\"https://...\").")
 	}
 
-	// Chain ID da rede Sepolia
-	chainID := big.NewInt(11155111)
+	chainID := big.NewInt(1337) // Chain ID padrão do Ganache
 
 	// --- CONEXÃO ETHEREUM ---
 	client, err := ethclient.Dial(infuraURL)
@@ -46,7 +49,7 @@ func main() {
 	// --- CARREGAR CHAVE PRIVADA ---
 	privateKey, err := crypto.HexToECDSA(privateKeyHex)
 	if err != nil {
-		log.Fatalf("Falha ao carregar chave privada: %v", err)
+		log.Fatalf("Falha ao carregar chave privada. Verifique se ETHEREUM_PRIVATE_KEY está correta e não inclui o '0x': %v", err) // Adicionado dica
 	}
 
 	publicKey := privateKey.Public()
@@ -64,7 +67,7 @@ func main() {
 	} else {
 		fmt.Printf("Saldo da conta: %s ETH (para gás)\n", new(big.Float).Quo(new(big.Float).SetInt(balance), big.NewFloat(1e18)))
 		if balance.Cmp(big.NewInt(0)) == 0 {
-			log.Fatal("Sua conta não tem ETH. Obtenha ETH de teste de um Sepolia Faucet.")
+			log.Fatal("Sua conta não tem ETH na rede Sepolia. Obtenha ETH de teste de um Sepolia Faucet.")
 		}
 	}
 
@@ -84,15 +87,16 @@ func main() {
 		log.Fatalf("Falha ao criar transactor: %v", err)
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)     // Não enviando Ether junto com a implantação
-	auth.GasLimit = uint64(5000000) // Limite de gás para implantação (pode precisar ajustar)
+	auth.Value = big.NewInt(0)      // Não enviando Ether junto com a implantação
+	auth.GasLimit = uint64(6000000) // Limite de gás para implantação (pode precisar ajustar)
 	auth.GasPrice = gasPrice
 
 	fmt.Println("Preparando implantação do contrato...")
 
 	// --- IMPLANTAR CONTRATO ---
 	// O construtor do ChargingStationManager não aceita argumentos.
-	address, tx, instance, err := blockchain_contracts.DeployChargingStationManager(auth, client)
+	address, tx, _, err := abi_contracts.DeployContratos(auth, client) // Se o nome do contrato for diferente, substitua "DeployChargingStationManager" pelo nome correto.
+
 	if err != nil {
 		log.Fatalf("Falha ao implantar contrato: %v", err)
 	}
@@ -119,7 +123,7 @@ func main() {
 	}
 }
 
-// Pequena função auxiliar para obter variáveis de ambiente
+// Pequena função auxiliar para obter variáveis de ambiente (esta função não será usada diretamente no main agora, mas é um bom exemplo)
 func getEnv(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {

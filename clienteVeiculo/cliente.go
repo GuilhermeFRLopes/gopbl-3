@@ -4,25 +4,26 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
+
+	//"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"sort"
-	"sync"
+
+	//"sync"
 	"time"
 )
 
-// Modelo de dados simplificado para o posto (replicando a struct do servidor)
 type Posto struct {
-	ID                 string    `json:"id"`
-	Nome               string    `json:"nome"`
-	Cidade             string    `json:"cidade"`
-	Latitude           float64   `json:"latitude"`
-	Longitude          float64   `json:"longitude"`
-	Disponivel         bool      `json:"disponivel"`
-	UltimaAtualizacao  time.Time `json:"ultimaAtualizacao"`
-	ServidorOrigem     string    `json:"servidorOrigem"`
+	ID                string    `json:"id"`
+	Nome              string    `json:"nome"`
+	Cidade            string    `json:"cidade"`
+	Latitude          float64   `json:"latitude"`
+	Longitude         float64   `json:"longitude"`
+	Disponivel        bool      `json:"disponivel"`
+	UltimaAtualizacao time.Time `json:"ultimaAtualizacao"`
+	ServidorOrigem    string    `json:"servidorOrigem"`
 	VeiculoReservador string    `json:"veiculoReservador"`
 }
 
@@ -42,8 +43,11 @@ type Veiculo struct {
 
 var veiculo Veiculo
 var cadastrado bool = false
-var idPostosReservados []string // Mudando o nome para maior clareza
-var servidorBackendURL string = "http://127.0.0.1:8083" // URL do seu servidor Go
+var idPostosReservados []string
+
+// var servidorBackendURL string = "http://127.0.0.1:8083" // URL do seu servidor Go
+var servidorBackendURL string = "http://192.168.0.110:8083" // URL do seu servidor Go
+// 192.168.0.110
 
 func main() {
 	c := make(chan os.Signal, 1)
@@ -65,9 +69,8 @@ func main() {
 }
 
 func cadastrarVeiculo() {
-	fmt.Print("Digite o ID do veículo (deve ser um endereço ETH válido para teste): ")
-	fmt.Scanln(&veiculo.ID) // Em um cenário real, o ID do veículo seria um endereço ETH gerado pelo cliente.
-
+	fmt.Print("Digite o ID do veículo : ")
+	fmt.Scanln(&veiculo.ID)
 	fmt.Print("Digite a Latitude do veículo: ")
 	fmt.Scanln(&veiculo.Latitude)
 
@@ -121,7 +124,11 @@ func onSubmit(reservar bool) {
 	}
 
 	fmt.Printf("Operação de %s concluída: %s (Tx Hash: %s)\n", func() string {
-		if reservar { return "reserva" } else { return "liberação" }
+		if reservar {
+			return "reserva"
+		} else {
+			return "liberação"
+		}
 	}(), result["message"], result["txHash"])
 
 	if !reservar { // Se a operação foi de liberar, limpa a lista de postos reservados
@@ -168,66 +175,66 @@ func listarPostos() []Posto {
 }
 
 func montarRotas(postos []Posto) map[int][]Posto {
-    var postosFSA []Posto
-    var postosSonga []Posto
-    var postosSerrinha []Posto
-    var rotas = make(map[int][]Posto)
-    var quantidadeRotas int = 0
+	var postosFSA []Posto
+	var postosSonga []Posto
+	var postosSerrinha []Posto
+	var rotas = make(map[int][]Posto)
+	var quantidadeRotas int = 0
 
-    // Filtra apenas postos disponíveis para montar rotas
-    for _, posto := range postos {
-        if posto.Disponivel {
-            switch posto.Cidade {
-            case "Feira de Santana":
-                postosFSA = append(postosFSA, posto)
-            case "Serrinha":
-                postosSerrinha = append(postosSerrinha, posto)
-            case "São Gonçalo":
-                postosSonga = append(postosSonga, posto)
-            }
-        }
-    }
+	// Filtra apenas postos disponíveis para montar rotas
+	for _, posto := range postos {
+	if !posto.Disponivel {
+		switch posto.Cidade {
+		case "Feira de Santana":
+			postosFSA = append(postosFSA, posto)
+		case "Serrinha":
+			postosSerrinha = append(postosSerrinha, posto)
+		case "São Gonçalo":
+			postosSonga = append(postosSonga, posto)
+		}
+	}
+	}
 
-    var todosPostosDisponiveis []Posto
-    todosPostosDisponiveis = append(todosPostosDisponiveis, postosFSA...)
-    todosPostosDisponiveis = append(todosPostosDisponiveis, postosSonga...)
-    todosPostosDisponiveis = append(todosPostosDisponiveis, postosSerrinha...)
+	var todosPostosDisponiveis []Posto
+	todosPostosDisponiveis = append(todosPostosDisponiveis, postosFSA...)
+	todosPostosDisponiveis = append(todosPostosDisponiveis, postosSonga...)
+	todosPostosDisponiveis = append(todosPostosDisponiveis, postosSerrinha...)
 
-    // Rotas com 1 posto
-    for _, p := range todosPostosDisponiveis {
-        rotas[quantidadeRotas] = []Posto{p}
-        quantidadeRotas++
-    }
+	// Rotas com 1 posto
+	for _, p := range todosPostosDisponiveis {
+		rotas[quantidadeRotas] = []Posto{p}
+		quantidadeRotas++
+	}
 
-    // Rotas com 2 postos (ordem importa, cidades diferentes)
-    for i := 0; i < len(todosPostosDisponiveis); i++ {
-        for j := 0; j < len(todosPostosDisponiveis); j++ {
-            if i != j && todosPostosDisponiveis[i].Cidade != todosPostosDisponiveis[j].Cidade {
-                rotas[quantidadeRotas] = []Posto{todosPostosDisponiveis[i], todosPostosDisponiveis[j]}
-                quantidadeRotas++
-            }
-        }
-    }
+	// Rotas com 2 postos (ordem importa, cidades diferentes)
+	for i := 0; i < len(todosPostosDisponiveis); i++ {
+		for j := 0; j < len(todosPostosDisponiveis); j++ {
+			if i != j && todosPostosDisponiveis[i].Cidade != todosPostosDisponiveis[j].Cidade {
+				rotas[quantidadeRotas] = []Posto{todosPostosDisponiveis[i], todosPostosDisponiveis[j]}
+				quantidadeRotas++
+			}
+		}
+	}
 
-    // Rotas com 3 postos (ordem importa, cidades diferentes)
-    for i := 0; i < len(todosPostosDisponiveis); i++ {
-        for j := 0; j < len(todosPostosDisponiveis); j++ {
-            for k := 0; k < len(todosPostosDisponiveis); k++ {
-                if i != j && i != k && j != k {
-                    // Verifica se as 3 cidades são distintas
-                    ci := todosPostosDisponiveis[i].Cidade
-                    cj := todosPostosDisponiveis[j].Cidade
-                    ck := todosPostosDisponiveis[k].Cidade
-                    if ci != cj && ci != ck && cj != ck {
-                        rotas[quantidadeRotas] = []Posto{todosPostosDisponiveis[i], todosPostosDisponiveis[j], todosPostosDisponiveis[k]}
-                        quantidadeRotas++
-                    }
-                }
-            }
-        }
-    }
+	// Rotas com 3 postos (ordem importa, cidades diferentes)
+	for i := 0; i < len(todosPostosDisponiveis); i++ {
+		for j := 0; j < len(todosPostosDisponiveis); j++ {
+			for k := 0; k < len(todosPostosDisponiveis); k++ {
+				if i != j && i != k && j != k {
+					// Verifica se as 3 cidades são distintas
+					ci := todosPostosDisponiveis[i].Cidade
+					cj := todosPostosDisponiveis[j].Cidade
+					ck := todosPostosDisponiveis[k].Cidade
+					if ci != cj && ci != ck && cj != ck {
+						rotas[quantidadeRotas] = []Posto{todosPostosDisponiveis[i], todosPostosDisponiveis[j], todosPostosDisponiveis[k]}
+						quantidadeRotas++
+					}
+				}
+			}
+		}
+	}
 
-    return rotas
+	return rotas
 }
 
 func procurarPostosParaReserva(rotas map[int][]Posto) {
@@ -267,7 +274,7 @@ func menu() {
 		fmt.Println("3 - Consultar postos disponíveis")
 		fmt.Println("4 - Reservar posto")
 		fmt.Println("5 - Finalizar viagem")
-		fmt.Println("6 - Sair") // Removida opção de servidor preferido, pois não é mais relevante no cliente para este cenário
+		//fmt.Println("6 - Sair") // Removida opção de servidor preferido, pois não é mais relevante no cliente para este cenário
 		var opcao int
 		fmt.Print("Escolha uma opção: ")
 		fmt.Scanln(&opcao)
@@ -309,9 +316,9 @@ func menu() {
 			} else {
 				fmt.Println("Você não possui reservas ativas para finalizar.")
 			}
-		case 6:
-			// Lógica de encerramento já está na goroutine do sinal
-			return
+		//case 6:
+		// Lógica de encerramento já está na goroutine do sinal
+		//return
 		default:
 			fmt.Println("Opção inválida.")
 		}
