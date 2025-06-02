@@ -67,7 +67,7 @@ contract GerenciadorPostos {
     event DisputaResolvida(string idPosto, address vencedora);
 
     function cadastrarPosto(string memory _id, string memory _nome, string memory _cidade) public {
-        require(bytes(postos[_id].id).length == 0, "Posto já cadastrado.");
+        require(bytes(postos[_id].id).length == 0, "Posto ja cadastrado.");
         postos[_id] = Posto(_id, _nome, _cidade, msg.sender, true, block.timestamp, address(0));
         listaIdsPostos.push(_id);
         postosPorEmpresa[msg.sender].push(_id);
@@ -76,7 +76,7 @@ contract GerenciadorPostos {
 
     function reservarPosto(string memory _id) public {
         require(bytes(postos[_id].id).length > 0, "Posto inexistente.");
-        require(postos[_id].disponivel, "Posto já reservado.");
+        require(postos[_id].disponivel, "Posto ja reservado.");
         postos[_id].disponivel = false;
         postos[_id].veiculoReservador = msg.sender;
         postos[_id].ultimaAtualizacao = block.timestamp;
@@ -86,8 +86,8 @@ contract GerenciadorPostos {
 
     function liberarPosto(string memory _id) public {
         require(bytes(postos[_id].id).length > 0, "Posto inexistente.");
-        require(!postos[_id].disponivel, "Posto já está disponível.");
-        require(postos[_id].veiculoReservador == msg.sender, "Apenas o veículo que reservou pode liberar.");
+        require(!postos[_id].disponivel, "Posto ja esta disponivel.");
+        require(postos[_id].veiculoReservador == msg.sender, "Apenas o veiculo que reservou pode liberar.");
         postos[_id].disponivel = true;
         postos[_id].veiculoReservador = address(0);
         postos[_id].ultimaAtualizacao = block.timestamp;
@@ -96,7 +96,7 @@ contract GerenciadorPostos {
     function registrarRecarga(string memory _id, uint256 _kWh, uint256 _valor) public {
         require(bytes(postos[_id].id).length > 0, "Posto inexistente.");
         require(!postos[_id].disponivel, "Posto deve estar reservado.");
-        require(postos[_id].veiculoReservador == msg.sender, "Apenas o veículo que reservou pode registrar recarga.");
+        require(postos[_id].veiculoReservador == msg.sender, "Apenas o veiculo que reservou pode registrar recarga.");
         historicoRecargas.push(Recarga(_id, msg.sender, _kWh, _valor, block.timestamp));
         emit RecargaEfetuada(_id, msg.sender, _kWh, _valor, block.timestamp);
     }
@@ -104,7 +104,7 @@ contract GerenciadorPostos {
     function registrarPagamento(string memory _id, uint256 _valor) public {
         require(bytes(postos[_id].id).length > 0, "Posto inexistente.");
         require(!postos[_id].disponivel, "Posto deve estar reservado.");
-        require(postos[_id].veiculoReservador == msg.sender, "Apenas o veículo que reservou pode pagar.");
+        require(postos[_id].veiculoReservador == msg.sender, "Apenas o veiculo que reservou pode pagar.");
         historicoPagamentos.push(Pagamento(_id, msg.sender, _valor, block.timestamp));
         emit PagamentoEfetuado(_id, msg.sender, _valor, block.timestamp);
     }
@@ -137,7 +137,7 @@ contract GerenciadorPostos {
     // Abrir disputa por um posto
     function abrirDisputa(string memory _idPosto, string memory _motivo) public {
         require(bytes(postos[_idPosto].id).length > 0, "Posto inexistente.");
-        require(disputas[_idPosto].status != StatusDisputa.Aberta, "Já existe disputa aberta para este posto.");
+        require(disputas[_idPosto].status != StatusDisputa.Aberta, "Ja existe disputa aberta para este posto.");
         Disputa storage d = disputas[_idPosto];
         d.idPosto = _idPosto;
         d.empresaRequerente = msg.sender;
@@ -153,10 +153,10 @@ contract GerenciadorPostos {
 
     // Votar em uma disputa (apenas empresas que possuem pelo menos um posto)
     function votarDisputa(string memory _idPosto, bool aFavor) public {
-        require(disputas[_idPosto].status == StatusDisputa.Aberta, "Disputa não está aberta.");
-        require(possuiPosto(msg.sender), "Só empresas com posto podem votar.");
+        require(disputas[_idPosto].status == StatusDisputa.Aberta, "Disputa nao esta aberta.");
+        require(possuiPosto(msg.sender), "So empresas com posto podem votar.");
         Disputa storage d = disputas[_idPosto];
-        require(!d.votou[msg.sender], "Empresa já votou nesta disputa.");
+        require(!d.votou[msg.sender], "Empresa ja votou nesta disputa.");
         d.votou[msg.sender] = true;
         d.votantes.push(msg.sender);
         if (aFavor) {
@@ -170,7 +170,7 @@ contract GerenciadorPostos {
     // Resolver disputa (qualquer um pode chamar, resultado por maioria simples)
     function resolverDisputa(string memory _idPosto) public {
         Disputa storage d = disputas[_idPosto];
-        require(d.status == StatusDisputa.Aberta, "Disputa não está aberta.");
+        require(d.status == StatusDisputa.Aberta, "Disputa nao esta aberta.");
         require(d.votantes.length > 0, "Nenhum voto registrado.");
         if (d.votosAFavor > d.votosContra) {
             d.vencedora = d.empresaRequerente;

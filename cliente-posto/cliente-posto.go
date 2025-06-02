@@ -33,7 +33,8 @@ const (
 	// Chave privada para uma conta com saldo na rede de teste
 	// ATENÇÃO: NUNCA USE CHAVES PRIVADAS EM PRODUÇÃO DIRETAMENTE NO CÓDIGO!
 	chavePrivadaHex     = "59c6995e998f97a5a004496608237ee6b68eef6727284b578e8dc038161f0340" // Exemplo: Geth --dev account 0
-	enderecoContratoHex = "0x762f01C9503923d142A9f697523f6e91122a6136"                       // SUBSTITUA PELO SEU ENDEREÇO DE CONTRATO IMPLANTADO
+	enderecoContratoHex = "0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab"                       // SUBSTITUA PELO SEU ENDEREÇO DE CONTRATO IMPLANTADO
+	// comando para pegar o endereco de contrato: ganache --deterministic --accounts 10 --miner.blockTime 1
 )
 
 func main() {
@@ -177,7 +178,7 @@ func cadastrarNovoPosto() {
 		return
 	}
 
-	tx, err := contratoGerenciador.RegisterStation(auth, id, nome, cidade) // CORRIGIDO: nome da função no contrato
+	tx, err := contratoGerenciador.CadastrarPosto(auth, id, nome, cidade) // CORRIGIDO: nome da função no contrato
 	if err != nil {
 		fmt.Printf("Erro ao cadastrar posto no contrato: %v\n", err)
 		return
@@ -314,7 +315,9 @@ func consultarMeusPostos() {
 	defer cancel()
 
 	// O contrato armazena os IDs dos postos por empresa
-	idsPostos, err := contratoGerenciador.PostosPorEmpresa(&bind.CallOpts{Context: ctx}, enderecoDaConta)
+	// idsPostos, err := contratoGerenciador.PostosPorEmpresa(&bind.CallOpts{Context: ctx}, enderecoDaConta, big.NewInt(0)) // Correção temporária, precisa verificar o que é o big.Int
+	// Tentando usar a função ConsultarPostosPorEmpresa que parece mais adequada
+	idsPostos, err := contratoGerenciador.ConsultarPostosPorEmpresa(&bind.CallOpts{Context: ctx}, enderecoDaConta)
 	if err != nil {
 		fmt.Printf("Erro ao consultar postos da sua empresa: %v\n", err)
 		return
@@ -328,7 +331,7 @@ func consultarMeusPostos() {
 	fmt.Println("\n--- Seus Postos Cadastrados ---")
 	for _, id := range idsPostos {
 		// A função ConsultarPosto do contrato Solidity retorna a struct completa do posto
-		posto, err := contratoGerenciador.ChargingStations(&bind.CallOpts{Context: ctx}, id) // CORRIGIDO
+		posto, err := contratoGerenciador.Postos(&bind.CallOpts{Context: ctx}, id) // CORRIGIDO para Postos (acesso ao mapping)
 		if err != nil {
 			fmt.Printf("Erro ao consultar detalhes do posto %s: %v\n", id, err)
 			continue

@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
+	//"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"sort"
-	"sync"
+	//"sync"
 	"time"
 )
 
