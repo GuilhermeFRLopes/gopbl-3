@@ -42,31 +42,31 @@ contract Contrato {
     // }
 
     //funçao que reserva ou libera os postos
-    function reservarVagaPostos(string[] memory _idPostos, bool _reservar, string memory _reservador) public{
-        if (!_reservar){
-            //logica para liberar os postos
-            for (uint i = 0; i < idsPostos.length; i++){
-                string memory p = idsPostos[i];
-                PostoRecarga storage posto = postosRecarga[p];
-                if (posto.ocupado){
-                    if (keccak256(bytes(posto.reservador)) == keccak256(bytes(_reservador))){
-                        posto.ocupado = false;
-                        posto.reservador = _reservador;
-                        //liberou o posto
-                        emit AtualDisponibilidadePosto(posto.id, posto.ocupado, posto.servidorOrigem);
-                    }
-                } 
-                // emit AtualDisponibilidadePosto(idPosto, disponivel, servidorOrigem);
-            }
-        } else {
-            //logica para reservar
-            for (uint i = 0; i < _idPostos.length; i++){
-                PostoRecarga storage posto = postosRecarga[(_idPostos[i])];
-                require(posto.ocupado == true, "Posto ja esta reservado");
+   function reservarVagaPostos(string[] memory _idPostos, bool _reservar, string memory _reservador) public {
+        require(_idPostos.length > 0, "Nenhum ID de posto fornecido.");
+
+        for (uint i = 0; i < _idPostos.length; i++) {
+            string memory idDoPostoAtual = _idPostos[i]; // Pega o ID da lista que veio na chamada
+            PostoRecarga storage posto = postosRecarga[idDoPostoAtual]; // Acessa o posto pelo ID
+
+            require(bytes(posto.id).length > 0, "Posto nao existe."); // Garante que o posto existe
+
+            if (_reservar) {
+                // Logica para reservar:
+                // O posto DEVE estar NAO OCUPADO para ser reservado.
+                require(posto.ocupado == false, "Posto ja esta ocupado.");
                 posto.ocupado = true;
-                posto.reservador =  _reservador;
-                //reservou o posto
-                emit AtualDisponibilidadePosto(posto.id, posto.ocupado, posto.servidorOrigem);
+                posto.reservador = _reservador;
+                emit AtualDisponibilidadePosto(posto.id, posto.ocupado, posto.reservador); // Emite evento
+
+            } else {
+                // Logica para liberar:
+                // O posto DEVE estar OCUPADO para ser liberado.
+                require(posto.ocupado == true, "Posto ja esta disponivel.");                
+                require(keccak256(bytes(posto.reservador)) == keccak256(bytes(_reservador)), "Apenas o reservador pode liberar este posto.");
+                posto.ocupado = false;
+                posto.reservador = ""; // Limpa o reservador
+                emit AtualDisponibilidadePosto(posto.id, posto.ocupado, posto.reservador); // Emite evento
             }
         }
     }

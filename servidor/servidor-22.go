@@ -51,7 +51,7 @@ func main() {
 	fmt.Println("Conectado ao Ethereum com sucesso!")
 	
 	//numero do contrato
-	contractAddress = common.HexToAddress("0x3f8B49a28CFa9b2009B4Ab5959117f29355A6A14") 
+	contractAddress = common.HexToAddress("0x1BC2B436CaEFFC3F64c5d882A6865DC847899f16") 
 	// Se usar variáveis de ambiente
 	// contractAddress = common.HexToAddress(os.Getenv("CONTRACT_ADDRESS"))
 
@@ -246,7 +246,7 @@ func editarPostoHandler(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	
+
 	reservadorString := data.ClientID
 
 	auth, err := getAuthTransactor(ctx)
@@ -255,15 +255,30 @@ func editarPostoHandler(c *gin.Context) {
 		return
 	}
 
-	// Chamar a nova função 'reservarVagaPostos' com os parâmetros corretos
 	tx, err := contractInstance.ReservarVagaPostos(auth, data.IDPostos, data.Reservar, reservadorString)
 	if err != nil {
 		// Tratamento de erros específicos do NOVO contrato
-		if strings.Contains(err.Error(), "Posto ja esta reservado") { // <-- Nova mensagem de erro
-			c.JSON(http.StatusConflict, gin.H{"error": "Um ou mais postos já estão reservados."})
+		if strings.Contains(err.Error(), "Posto ja esta ocupado") { // <-- Mensagem de erro para tentativa de reservar posto ocupado
+			c.JSON(http.StatusConflict, gin.H{"error": "Um ou mais postos já estão ocupados/reservados."})
 			return
 		}
-		// Seu contrato não tem "Station does not exist." para esta função, mas é bom ter catch-all
+		if strings.Contains(err.Error(), "Posto nao existe") { // <-- Mensagem de erro se posto não existe
+			c.JSON(http.StatusNotFound, gin.H{"error": "Um ou mais postos não foram encontrados na blockchain."})
+			return
+		}
+		if strings.Contains(err.Error(), "Posto ja esta disponivel") { // <-- Mensagem de erro para tentativa de liberar posto disponível
+			c.JSON(http.StatusConflict, gin.H{"error": "Um ou mais postos já estão disponíveis para liberação."})
+			return
+		}
+		if strings.Contains(err.Error(), "Apenas o reservador pode liberar este posto") { // <-- Mensagem de erro se não for o reservador
+			c.JSON(http.StatusForbidden, gin.H{"error": "Você não é o reservador de um ou mais postos para liberá-los."})
+			return
+		}
+		if strings.Contains(err.Error(), "Nenhum ID de posto fornecido") { // <-- Mensagem de erro se lista vazia
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Nenhum ID de posto fornecido para a operação."})
+			return
+		}
+		
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Erro ao chamar contrato para %s posto(s): %v", func() string {
 			if data.Reservar {
 				return "reservar"
