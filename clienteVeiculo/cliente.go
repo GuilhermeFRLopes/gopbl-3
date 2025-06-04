@@ -46,7 +46,7 @@ var cadastrado bool = false
 var idPostosReservados []string
 
 // var servidorBackendURL string = "http://127.0.0.1:8083" // URL do seu servidor Go
-var servidorBackendURL string = "http://192.168.0.110:8083" // URL do seu servidor Go
+var servidorBackendURL string = "http://172.17.0.1:8083" // URL do seu servidor Go
 // 192.168.0.110
 
 func main() {

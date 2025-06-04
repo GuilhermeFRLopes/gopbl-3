@@ -24,7 +24,7 @@ type Posto struct {
 }
 
 var posto_criado Posto
-var servidorBackendURL string = "http://192.168.0.110:8083"
+var servidorBackendURL string = "http://172.17.0.1:8083"
 
 func main() {
 	c := make(chan os.Signal, 1)

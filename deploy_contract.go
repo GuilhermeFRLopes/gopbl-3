@@ -25,14 +25,14 @@ func main() {
 		// Se a variável de ambiente não estiver definida, use uma chave privada de uma conta do Ganache diretamente AQUI para teste
 		// EXTREMAMENTE IMPORTANTE: NUNCA FAÇA ISSO COM CHAVES DE PRODUÇÃO.
 		// Para teste local, é aceitável para conveniência.
-		privateKeyHex = "ea2065708f76ee266d034c4d1bf9767acc80ced14346955c9402385bc212c34b" // Ex: 4f3edf983ad256c709e6a10f1723ad2eeaec49c9fda382894563704043b075ff
+		privateKeyHex = "6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1" // Ex: 4f3edf983ad256c709e6a10f1723ad2eeaec49c9fda382894563704043b075ff
 		log.Println("Usando chave privada diretamente no código para teste local. Use variáveis de ambiente em produção!")
 	}
 
 	// infuraURL agora lê da variável de ambiente "INFURA_SEPOLIA_URL"
 	infuraURL := os.Getenv("INFURA_SEPOLIA_URL") // <-- CORRIGIDO AQUI!
 	if infuraURL == "" {
-		infuraURL = "HTTP://127.0.0.1:7545"
+		infuraURL = "HTTP://127.0.0.1:8545"
 		//log.Fatal("Variável de ambiente INFURA_SEPOLIA_URL não configurada. Por favor, defina-a no terminal antes de executar (ex: set INFURA_SEPOLIA_URL=\"https://...\").")
 	}
 

@@ -51,7 +51,7 @@ func main() {
 	fmt.Println("Conectado ao Ethereum com sucesso!")
 	
 	//numero do contrato
-	contractAddress = common.HexToAddress("0x1BC2B436CaEFFC3F64c5d882A6865DC847899f16") 
+	contractAddress = common.HexToAddress("0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab") 
 	// Se usar variáveis de ambiente
 	// contractAddress = common.HexToAddress(os.Getenv("CONTRACT_ADDRESS"))
 
@@ -76,7 +76,7 @@ func main() {
 func conectarEthereum() error {
 	var err error
 	// Conecta ao Ganache local
-	ethClient, err = ethclient.Dial("HTTP://127.0.0.1:7545") //endereço do ganache
+	ethClient, err = ethclient.Dial("HTTP://127.0.0.1:8545") //endereço do ganache
 	if err != nil {
 		return fmt.Errorf("falha ao conectar ao Ethereum (Ganache): %v", err)
 	}
@@ -84,7 +84,7 @@ func conectarEthereum() error {
 	// Carregar a chave privada da conta do Ganache
 	// Lembre-se de que essa chave deve ser de uma das contas pré-financiadas do SEU Ganache
 	//tem que mudar a chave toda hora que abrir o ganache
-	privateKeyHex := "ea2065708f76ee266d034c4d1bf9767acc80ced14346955c9402385bc212c34b"
+	privateKeyHex := "4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
 	privateKey, err = crypto.HexToECDSA(privateKeyHex)
 	if err != nil {
 		return fmt.Errorf("falha ao carregar chave privada: %v", err)
