@@ -11,6 +11,7 @@ contract Contrato {
         string servidorOrigem;
         string cidade; 
         string reservador;       
+        uint256 valorPagamento;
     }
 
     constructor(){
@@ -31,7 +32,7 @@ contract Contrato {
     function registrarPosto(string memory _id, int256 _latitude, int256 _longitude, string memory _servidorOrigem, string memory _cidade) public {
         //verifica se ja nao tem posto com esse id
         require(bytes(postosRecarga[_id].id).length == 0, "Posto de recarga ja cadastrado");
-        postosRecarga[_id] = PostoRecarga(_id,_latitude,_longitude,false,_servidorOrigem,_cidade,"");
+        postosRecarga[_id] = PostoRecarga(_id,_latitude,_longitude,false,_servidorOrigem,_cidade,"", 0);
         idsPostos.push(_id);
         emit PostoRegistrado(_id, _cidade, _servidorOrigem);
     }
@@ -42,7 +43,7 @@ contract Contrato {
     // }
 
     //funçao que reserva ou libera os postos
-   function reservarVagaPostos(string[] memory _idPostos, bool _reservar, string memory _reservador) public {
+   function reservarVagaPostos(string[] memory _idPostos, bool _reservar, string memory _reservador, uint256 _valorPagamento) public {
         require(_idPostos.length > 0, "Nenhum ID de posto fornecido.");
 
         for (uint i = 0; i < _idPostos.length; i++) {
@@ -57,6 +58,7 @@ contract Contrato {
                 require(posto.ocupado == false, "Posto ja esta ocupado.");
                 posto.ocupado = true;
                 posto.reservador = _reservador;
+                posto.valorPagamento = _valorPagamento;
                 emit AtualDisponibilidadePosto(posto.id, posto.ocupado, posto.reservador); // Emite evento
 
             } else {
@@ -66,6 +68,7 @@ contract Contrato {
                 require(keccak256(bytes(posto.reservador)) == keccak256(bytes(_reservador)), "Apenas o reservador pode liberar este posto.");
                 posto.ocupado = false;
                 posto.reservador = ""; // Limpa o reservador
+                posto.valorPagamento = 0;
                 emit AtualDisponibilidadePosto(posto.id, posto.ocupado, posto.reservador); // Emite evento
             }
         }

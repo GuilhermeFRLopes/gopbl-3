@@ -25,7 +25,7 @@ func main() {
 		// Se a variável de ambiente não estiver definida, use uma chave privada de uma conta do Ganache diretamente AQUI para teste
 		// EXTREMAMENTE IMPORTANTE: NUNCA FAÇA ISSO COM CHAVES DE PRODUÇÃO.
 		// Para teste local, é aceitável para conveniência.
-		privateKeyHex = "6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1" // Ex: 4f3edf983ad256c709e6a10f1723ad2eeaec49c9fda382894563704043b075ff
+		privateKeyHex = "4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d" // Ex: 4f3edf983ad256c709e6a10f1723ad2eeaec49c9fda382894563704043b075ff
 		log.Println("Usando chave privada diretamente no código para teste local. Use variáveis de ambiente em produção!")
 	}
 

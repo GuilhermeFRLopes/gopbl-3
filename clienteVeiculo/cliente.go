@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 
 	//"log"
 	"net/http"
@@ -21,17 +22,19 @@ type Posto struct {
 	Cidade            string    `json:"cidade"`
 	Latitude          float64   `json:"latitude"`
 	Longitude         float64   `json:"longitude"`
-	Disponivel        bool      `json:"disponivel"`
+	Ocupado           bool      `json:"ocupado"`
 	UltimaAtualizacao time.Time `json:"ultimaAtualizacao"`
 	ServidorOrigem    string    `json:"servidorOrigem"`
 	VeiculoReservador string    `json:"veiculoReservador"`
+	ValorPagamento    uint64    `json:"valorPagamento"`
 }
 
 // Modelo de dados para a requisição de reserva
 type ReservaData struct {
-	IDPostos []string `json:"idPostos"`
-	Reservar bool     `json:"reservar"`
-	ClientID string   `json:"clientId"`
+	IDPostos       []string `json:"idPostos"`
+	Reservar       bool     `json:"reservar"`
+	ClientID       string   `json:"clientId"`
+	ValorPagamento uint64   `json:"valorPagamento"`
 }
 
 // Modelo para o veículo
@@ -59,7 +62,7 @@ func main() {
 
 		if len(idPostosReservados) > 0 && veiculo.ID != "" {
 			fmt.Println("Tentando liberar postos reservados...")
-			onSubmit(false) // Tenta liberar os postos antes de sair
+			onSubmit(false, 0) // Tenta liberar os postos antes de sair
 		}
 		fmt.Println("Cliente encerrado.")
 		os.Exit(0)
@@ -81,11 +84,12 @@ func cadastrarVeiculo() {
 	fmt.Println("Veículo cadastrado:", veiculo)
 }
 
-func onSubmit(reservar bool) {
+func onSubmit(reservar bool, preco float64) {
 	data := ReservaData{
-		IDPostos: idPostosReservados,
-		Reservar: reservar,
-		ClientID: veiculo.ID,
+		IDPostos:       idPostosReservados,
+		Reservar:       reservar,
+		ClientID:       veiculo.ID,
+		ValorPagamento: uint64(preco * 100), // Converter para centavos
 	}
 
 	payload, err := json.Marshal(data)
@@ -150,6 +154,15 @@ func listarPostos() []Posto {
 		return []Posto{}
 	}
 
+	fmt.Println("\n--- Postos Disponíveis ---")
+	for _, posto := range postos {
+		estado := "Disponível"
+		if posto.Ocupado {
+			estado = fmt.Sprintf("Reservado por %s (Valor: R$ %.2f)", posto.VeiculoReservador, float64(posto.ValorPagamento)/100.0)
+		}
+		fmt.Printf("ID: %s, Cidade: %s, Estado: %s\n", posto.ID, posto.Cidade, estado)
+	}
+
 	rotasGeradas := montarRotas(postos)
 
 	if len(rotasGeradas) > 0 {
@@ -183,16 +196,16 @@ func montarRotas(postos []Posto) map[int][]Posto {
 
 	// Filtra apenas postos disponíveis para montar rotas
 	for _, posto := range postos {
-	if !posto.Disponivel {
-		switch posto.Cidade {
-		case "Feira de Santana":
-			postosFSA = append(postosFSA, posto)
-		case "Serrinha":
-			postosSerrinha = append(postosSerrinha, posto)
-		case "São Gonçalo":
-			postosSonga = append(postosSonga, posto)
+		if !posto.Ocupado {
+			switch posto.Cidade {
+			case "Feira de Santana":
+				postosFSA = append(postosFSA, posto)
+			case "Serrinha":
+				postosSerrinha = append(postosSerrinha, posto)
+			case "São Gonçalo":
+				postosSonga = append(postosSonga, posto)
+			}
 		}
-	}
 	}
 
 	var todosPostosDisponiveis []Posto
@@ -253,17 +266,67 @@ func procurarPostosParaReserva(rotas map[int][]Posto) {
 		fmt.Println("Rota inválida.")
 		return
 	}
-	idPostosReservados = []string{}
-	for _, p := range rotaEscolhida {
-		idPostosReservados = append(idPostosReservados, p.ID)
+	// Calcular a distância total da rota
+	distanciaTotal := 0.0
+	pontoAnterior := veiculo // Começa do veículo
+	for _, posto := range rotaEscolhida {
+		distanciaTotal += distanciaHaversine(pontoAnterior.Latitude, pontoAnterior.Longitude, posto.Latitude, posto.Longitude)
+		pontoAnterior.Latitude = posto.Latitude
+		pontoAnterior.Longitude = posto.Longitude
 	}
 
-	if len(idPostosReservados) > 0 {
-		fmt.Println("Postos selecionados para reserva:", idPostosReservados)
-		onSubmit(true) // Tenta reservar
-	} else {
-		fmt.Println("Nenhum posto selecionado.")
+	precoPorKm := 0.5 // Exemplo de preço por KM
+	precoTotal := distanciaTotal * precoPorKm
+
+	fmt.Printf("\n--- Detalhes da Rota e Pagamento ---\n")
+	fmt.Printf("Rota Selecionada: ")
+	for i, p := range rotaEscolhida {
+		fmt.Printf("%s", p.ID)
+		if i < len(rotaEscolhida)-1 {
+			fmt.Printf(" -> ")
+		}
 	}
+	fmt.Println()
+	fmt.Printf("Distância Total: %.2f km\n", distanciaTotal)
+	fmt.Printf("Preço Total: R$ %.2f\n", precoTotal)
+
+	fmt.Println("\nDeseja confirmar a reserva e o pagamento? (s/n)")
+	var confirmacao string
+	fmt.Scanln(&confirmacao)
+
+	if confirmacao == "s" || confirmacao == "S" {
+		idPostosReservados = []string{}
+		for _, p := range rotaEscolhida {
+			idPostosReservados = append(idPostosReservados, p.ID)
+		}
+
+		if len(idPostosReservados) > 0 {
+			fmt.Println("Confirmando reserva para os postos:", idPostosReservados)
+			onSubmit(true, precoTotal) // Tenta reservar
+		} else {
+			fmt.Println("Nenhum posto selecionado.")
+		}
+	} else {
+		fmt.Println("Reserva cancelada.")
+	}
+}
+
+func hsin(theta float64) float64 {
+	return math.Pow(math.Sin(theta/2), 2)
+}
+
+func distanciaHaversine(lat1, lon1, lat2, lon2 float64) float64 {
+	var la1, lo1, la2, lo2, r float64
+	la1 = lat1 * math.Pi / 180
+	lo1 = lon1 * math.Pi / 180
+	la2 = lat2 * math.Pi / 180
+	lo2 = lon2 * math.Pi / 180
+
+	r = 6371 // Raio da Terra em KM
+
+	h := hsin(la2-la1) + math.Cos(la1)*math.Cos(la2)*hsin(lo2-lo1)
+	distancia := 2 * r * math.Asin(math.Sqrt(h))
+	return distancia
 }
 
 func menu() {
@@ -312,7 +375,7 @@ func menu() {
 			}
 		case 5:
 			if len(idPostosReservados) > 0 {
-				onSubmit(false) // Tenta finalizar a reserva
+				onSubmit(false, 0) // Tenta finalizar a reserva
 			} else {
 				fmt.Println("Você não possui reservas ativas para finalizar.")
 			}

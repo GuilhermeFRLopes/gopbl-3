@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	blockchain_contracts "gopbl-3/contratos"
 	"log"
 	"math/big"
 	"net/http"
 	"strings"
 	"time"
-	blockchain_contracts "gopbl-3/contratos"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -20,26 +21,28 @@ import (
 
 // Modelo de dados para o posto
 type Posto struct {
-	ID                string    `json:"id"`
-	Latitude          int64     `json:"latitude"`  
-	Longitude         int64     `json:"longitude"`
-	Ocupado           bool      `json:"ocupado"`
-	ServidorOrigem    string    `json:"servidorOrigem"`
-	Cidade            string    `json:"cidade"`
-	Reservador        string    `json:"reservador"`	
+	ID             string `json:"id"`
+	Latitude       int64  `json:"latitude"`
+	Longitude      int64  `json:"longitude"`
+	Ocupado        bool   `json:"ocupado"`
+	ServidorOrigem string `json:"servidorOrigem"`
+	Cidade         string `json:"cidade"`
+	Reservador     string `json:"reservador"`
+	ValorPagamento uint64 `json:"valorPagamento"`
 }
 
 // Modelo de dados para a requisição de reserva
 type ReservaData struct {
-	IDPostos []string `json:"idPostos"`
-	Reservar bool     `json:"reservar"`
-	ClientID string   `json:"clientId"` // O ID do veículo cliente (será o reservador no contrato)
+	IDPostos       []string `json:"idPostos"`
+	Reservar       bool     `json:"reservar"`
+	ClientID       string   `json:"clientId"` // O ID do veículo cliente (será o reservador no contrato)
+	ValorPagamento uint64   `json:"valorPagamento"`
 }
 
 // Variáveis para interação com Ethereum
 var ethClient *ethclient.Client
 
-var contractInstance *blockchain_contracts.Contratos 
+var contractInstance *blockchain_contracts.Contratos
 var contractAddress common.Address
 var privateKey *ecdsa.PrivateKey
 var fromAddress common.Address
@@ -49,14 +52,14 @@ func main() {
 		log.Fatalf("Erro fatal ao conectar ao Ethereum: %v", err)
 	}
 	fmt.Println("Conectado ao Ethereum com sucesso!")
-	
+
 	//numero do contrato
-	contractAddress = common.HexToAddress("0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab") 
+	contractAddress = common.HexToAddress("0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab")
 	// Se usar variáveis de ambiente
 	// contractAddress = common.HexToAddress(os.Getenv("CONTRACT_ADDRESS"))
 
 	var err error
-	contractInstance, err = blockchain_contracts.NewContratos(contractAddress, ethClient) 
+	contractInstance, err = blockchain_contracts.NewContratos(contractAddress, ethClient)
 	if err != nil {
 		log.Fatalf("Falha ao instanciar o contrato: %v", err)
 	}
@@ -84,7 +87,7 @@ func conectarEthereum() error {
 	// Carregar a chave privada da conta do Ganache
 	// Lembre-se de que essa chave deve ser de uma das contas pré-financiadas do SEU Ganache
 	//tem que mudar a chave toda hora que abrir o ganache
-	privateKeyHex := "4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
+	privateKeyHex := "6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c"
 	privateKey, err = crypto.HexToECDSA(privateKeyHex)
 	if err != nil {
 		return fmt.Errorf("falha ao carregar chave privada: %v", err)
@@ -147,47 +150,25 @@ func postosDisponiveisHandler(c *gin.Context) {
 	}
 
 	var todosPostos []Posto // Usando a struct Posto definida neste arquivo
-	for _, id := range idsPostos { 
-		
+	for _, id := range idsPostos {
+
 		stationData, err := contractInstance.PostosRecarga(&bind.CallOpts{Context: ctx}, id)
 		if err != nil {
 			log.Printf("Aviso: Erro ao obter detalhes completos do posto %s: %v", id, err)
 			continue
 		}
 
-		// A função VerificarDisponibilidade retorna apenas um bool
-		ocupado, err := contractInstance.VerificarDisponibilidade(&bind.CallOpts{Context: ctx}, id) // <-- ADAPTADO PARA 'VerificarDisponibilidade'
-		if err != nil {
-			log.Printf("Aviso: Erro ao obter disponibilidade do posto %s: %v", id, err)
-			continue
-		}
-		if (!ocupado){
-			fmt.Println("posto disponivel");
-			posto := Posto{
+		posto := Posto{
 			ID:             stationData.Id,
-			Latitude:       stationData.Latitude.Int64(), // int256 -> int64
-			Longitude:      stationData.Longitude.Int64(),// int256 -> int64
-			Ocupado:        stationData.Ocupado,          // Nome do campo no contrato é 'ocupado'
+			Latitude:       stationData.Latitude.Int64(),
+			Longitude:      stationData.Longitude.Int64(),
+			Ocupado:        stationData.Ocupado,
 			ServidorOrigem: stationData.ServidorOrigem,
 			Cidade:         stationData.Cidade,
-			Reservador:     stationData.Reservador,      // String no contrato
-			//Disponivel:     !stationData.Ocupado,        // A lógica de "disponível" no cliente é o inverso de "ocupado"
-			// UltimaAtualizacao removida pois não está no novo contrato Solidity
-			}
-			todosPostos = append(todosPostos, posto)
+			Reservador:     stationData.Reservador,
+			ValorPagamento: stationData.ValorPagamento.Uint64(),
 		}
-		// posto := Posto{
-		// 	ID:             stationData.Id,
-		// 	Latitude:       stationData.Latitude.Int64(), // int256 -> int64
-		// 	Longitude:      stationData.Longitude.Int64(),// int256 -> int64
-		// 	Ocupado:        stationData.Ocupado,          // Nome do campo no contrato é 'ocupado'
-		// 	ServidorOrigem: stationData.ServidorOrigem,
-		// 	Cidade:         stationData.Cidade,
-		// 	Reservador:     stationData.Reservador,      // String no contrato
-		// 	//Disponivel:     !stationData.Ocupado,        // A lógica de "disponível" no cliente é o inverso de "ocupado"
-		// 	// UltimaAtualizacao removida pois não está no novo contrato Solidity
-		// }
-		// todosPostos = append(todosPostos, posto)
+		todosPostos = append(todosPostos, posto)
 	}
 
 	c.JSON(http.StatusOK, todosPostos)
@@ -251,79 +232,40 @@ func editarPostoHandler(c *gin.Context) {
 
 	auth, err := getAuthTransactor(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Erro ao preparar transação Ethereum: %v", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Erro ao preparar transação: %v", err)})
 		return
 	}
 
-	tx, err := contractInstance.ReservarVagaPostos(auth, data.IDPostos, data.Reservar, reservadorString)
-	if err != nil {
-		// Tratamento de erros específicos do NOVO contrato
-		if strings.Contains(err.Error(), "Posto ja esta ocupado") { // <-- Mensagem de erro para tentativa de reservar posto ocupado
-			c.JSON(http.StatusConflict, gin.H{"error": "Um ou mais postos já estão ocupados/reservados."})
+	var txHash string
+	if data.Reservar {
+		// Lógica para reservar postos
+		valorPagamentoBigInt := new(big.Int).SetUint64(data.ValorPagamento)
+		tx, err := contractInstance.ReservarVagaPostos(auth, data.IDPostos, true, reservadorString, valorPagamentoBigInt)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Erro ao reservar postos: %v", err)})
 			return
 		}
-		if strings.Contains(err.Error(), "Posto nao existe") { // <-- Mensagem de erro se posto não existe
-			c.JSON(http.StatusNotFound, gin.H{"error": "Um ou mais postos não foram encontrados na blockchain."})
+		txHash = tx.Hash().Hex()
+		log.Printf("Transação de RESERVA enviada. Hash: %s\n", txHash)
+
+	} else {
+		// Lógica para liberar postos
+		tx, err := contractInstance.ReservarVagaPostos(auth, data.IDPostos, false, reservadorString, big.NewInt(0))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Erro ao liberar postos: %v", err)})
 			return
 		}
-		if strings.Contains(err.Error(), "Posto ja esta disponivel") { // <-- Mensagem de erro para tentativa de liberar posto disponível
-			c.JSON(http.StatusConflict, gin.H{"error": "Um ou mais postos já estão disponíveis para liberação."})
-			return
-		}
-		if strings.Contains(err.Error(), "Apenas o reservador pode liberar este posto") { // <-- Mensagem de erro se não for o reservador
-			c.JSON(http.StatusForbidden, gin.H{"error": "Você não é o reservador de um ou mais postos para liberá-los."})
-			return
-		}
-		if strings.Contains(err.Error(), "Nenhum ID de posto fornecido") { // <-- Mensagem de erro se lista vazia
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Nenhum ID de posto fornecido para a operação."})
-			return
-		}
-		
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Erro ao chamar contrato para %s posto(s): %v", func() string {
+		txHash = tx.Hash().Hex()
+		log.Printf("Transação de LIBERAÇÃO enviada. Hash: %s\n", txHash)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Operação de %s enviada com sucesso.", func() string {
 			if data.Reservar {
-				return "reservar"
-			} else {
-				return "liberar"
+				return "reserva"
 			}
-		}(), err)})
-		return
-	}
-
-	log.Printf("Transação de %s posto(s) enviada. Hash: %s\n", func() string {
-		if data.Reservar {
-			return "reserva"
-		} else {
 			return "liberação"
-		}
-	}(), tx.Hash().Hex())
-
-	receipt, err := bind.WaitMined(ctx, ethClient, tx)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Erro ao aguardar confirmação da transação de %s: %v", func() string {
-			if data.Reservar {
-				return "reserva"
-			} else {
-				return "liberação"
-			}
-		}(), err)})
-		return
-	}
-	if receipt.Status != 1 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Transação de %s falhou na blockchain. Status: %d", func() string {
-			if data.Reservar {
-				return "reserva"
-			} else {
-				return "liberação"
-			}
-		}(), receipt.Status)})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Postos %s com sucesso na blockchain!", func() string {
-		if data.Reservar {
-			return "reservados"
-		} else {
-			return "liberados"
-		}
-	}()), "txHash": tx.Hash().Hex()})
+		}()),
+		"txHash": txHash,
+	})
 }
