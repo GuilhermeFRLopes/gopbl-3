@@ -1,33 +1,45 @@
-Aqui está o README.md atualizado, com a seção "Como Executar" refeita para um ambiente sem Docker.
+# Sistema de Recarga de VEs Baseado em Blockchain
 
-Sistema de Recarga de VEs Baseado em Blockchain
 Este projeto implementa um sistema descentralizado para o gerenciamento de postos de recarga de veículos elétricos (VEs), utilizando a tecnologia blockchain para garantir a segurança, transparência e auditabilidade das transações. A solução foi desenvolvida como parte do Problema 3 da disciplina TEC502.
 
 O sistema visa resolver desafios enfrentados por usuários e empresas do setor de recarga de VEs, como a garantia de registros corretos de reservas e pagamentos, a prevenção de fraudes e a integração confiável entre diferentes operadores de postos de recarga.
 
-📝 Visão Geral do Projeto
+## 📍 Visão Geral do Projeto
+
 O objetivo central é criar um sistema que utiliza um livro-razão distribuído (blockchain) para registrar todas as operações de forma segura e transparente. As principais operações incluem o cadastro de novos postos de recarga, a reserva de vagas por usuários de VEs, o registro do histórico de recargas e a gestão de pagamentos entre os envolvidos.
 
 A arquitetura é genuinamente descentralizada, evitando o uso de soluções centralizadas para assegurar maior transparência e confiabilidade, conforme as restrições do problema.
 
-🚀 Funcionalidades Principais
+## 🚀 Funcionalidades Principais
+
 O sistema é composto por três componentes principais:
 
-Smart Contract (Contrato Inteligente): O núcleo da lógica de negócios, implementado em Solidity e implantado na blockchain Ethereum. Ele é responsável por:
+### Smart Contract (Contrato Inteligente)
 
-Registrar Postos: Adicionar novos postos de recarga à rede.
-Gerenciar Reservas: Controlar a reserva e a liberação de vagas nos postos.
-Consultar Dados: Fornecer acesso público ao histórico de transações e ao estado atual dos postos.
-Servidor Backend (Go): Atua como uma interface entre os clientes e a blockchain. Suas responsabilidades são:
+O núcleo da lógica de negócios, implementado em Solidity e implantado na blockchain Ethereum. Ele é responsável por:
 
-Expor uma API REST para que os clientes possam interagir com o sistema.
-Conectar-se a um nó Ethereum (como o Ganache) para enviar transações e consultar o estado do smart contract.
-Orquestrar as chamadas para as funções do contrato, como registrarPosto e reservarVagaPostos.
-Clientes (Go): Aplicações de linha de comando que simulam a interação de usuários e empresas com o sistema:
+- **Registrar Postos**: Adicionar novos postos de recarga à rede.
+- **Gerenciar Reservas**: Controlar a reserva e a liberação de vagas nos postos.
+- **Consultar Dados**: Fornecer acesso público ao histórico de transações e ao estado atual dos postos.
 
-Cliente de Posto (cliente-posto): Permite que empresas de recarga cadastrem novos postos na rede.
-Cliente de Veículo (cliente): Permite que usuários de VEs consultem postos disponíveis, montem rotas e reservem vagas para recarga.
-📁 Estrutura do Projeto
+### Servidor Backend (Go)
+
+Atua como uma interface entre os clientes e a blockchain. Suas responsabilidades são:
+
+- Expor uma API REST para que os clientes possam interagir com o sistema.
+- Conectar-se a um nó Ethereum (como o Ganache) para enviar transações e consultar o estado do smart contract.
+- Orquestrar as chamadas para as funções do contrato, como `registrarPosto` e `reservarVagaPostos`.
+
+### Clientes (Go)
+
+Aplicações de linha de comando que simulam a interação de usuários e empresas com o sistema:
+
+- **Cliente de Posto (cliente-posto)**: Permite que empresas de recarga cadastrem novos postos na rede.
+- **Cliente de Veículo (cliente)**: Permite que usuários de VEs consultem postos disponíveis, montem rotas e reservem vagas para recarga.
+
+## 📁 Estrutura do Projeto
+
+```
 /
 |-- clientePosto/
 |   |-- cliente-posto.go     # Aplicação cliente para cadastrar postos de recarga.
@@ -47,72 +59,85 @@ Cliente de Veículo (cliente): Permite que usuários de VEs consultem postos dis
 |-- deploy_contract.go       # Script para implantar o smart contract na blockchain.
 |-- makefile                 # Comandos para compilar e gerar o binding do contrato.
 |-- contract_address.txt     # Armazena o endereço do contrato implantado na rede.
-`-- comandos.txt             # Histórico de comandos úteis para desenvolvimento e execução.
-🛠️ Como Executar (Ambiente Local sem Docker)
-Para compilar e executar o projeto manualmente em sua máquina.
+`-- comandos.txt             # Histórico de comandos útis para desenvolvimento e execução.
+```
 
-Pré-requisitos
-Go (versão 1.18 ou superior).
-Node.js e npm para instalar o Ganache.
-Ganache CLI: npm install -g ganache.
-Solidity Compiler (solc) (versão 0.8.30 ou compatível).
-Abigen, uma ferramenta do Go-Ethereum.
-1. Iniciar a Rede Blockchain Local
-Em um terminal, inicie uma instância do Ganache. Ele criará uma blockchain de desenvolvimento local e fornecerá uma lista de contas com suas respectivas chaves privadas.
+## 🛠️ Como Executar (Ambiente Local sem Docker)
 
-Bash
+### Pré-requisitos
 
+- Go (versão 1.18 ou superior).
+- Node.js e npm para instalar o Ganache.
+- Ganache CLI: `npm install -g ganache`
+- Solidity Compiler (`solc`) (versão 0.8.30 ou compatível).
+- Abigen, uma ferramenta do Go-Ethereum.
+
+### 1. Iniciar a Rede Blockchain Local
+
+```bash
 ganache
-Anote uma das chaves privadas exibidas, pois você a usará nos próximos passos. O Ganache estará rodando em http://127.0.0.1:8545.
+```
 
-2. Compilar o Smart Contract e Gerar o Binding
-Em outro terminal, na raiz do projeto, execute o make para compilar o contrato e gerar o arquivo Go necessário para a interação.
+Anote uma das chaves privadas exibidas. O Ganache estará rodando em `http://127.0.0.1:8545`, é necessário ajustar o ganache para rodar em `http://0.0.0.0:8545` no laboratorio.
 
-Bash
+### 2. Compilar o Smart Contract e Gerar o Binding
 
-make iniciarGeral
-3. Configurar e Implantar o Smart Contract
-Edite o arquivo deploy_contract.go:
+```bash
+solc --abi --bin contratos/Contrato.sol -o contratos/build --overwrite --evm-version london
+abigen --abi contratos/build/Contrato.abi --bin contratos/build/Contrato.bin --pkg contratos --out contratos/contrato.go
+```
 
-Localize a variável privateKeyHex.
-Substitua o valor existente pela chave privada que você copiou do Ganache no passo 1.
-Certifique-se de que a variável infuraURL está configurada para HTTP://127.0.0.1:7545 ou a porta que seu Ganache está usando.
-Execute o script de implantação:
+### 3. Configurar e Implantar o Smart Contract
 
-Bash
+Edite o ficheiro `deploy_contract.go`:
 
+- Substitua `privateKeyHex` pela chave privada copiada do Ganache.
+- Verifique se `infuraURL` está como `HTTP://127.0.0.1:7545` (ou a porta e ip corretos).
+
+Execute:
+
+```bash
 go run deploy_contract.go
-Após a execução, o endereço do contrato implantado será exibido no terminal e salvo no arquivo contract_address.txt. Copie este endereço.
+```
 
-4. Configurar e Iniciar o Servidor
-Edite o arquivo servidor/servidor-22.go:
+O endereço do contrato será mostrado e salvo em `contract_address.txt`.
 
-Localize a variável contractAddress e cole o endereço do contrato que você copiou no passo anterior.
-Localize a variável privateKeyHex e cole uma chave privada diferente da que você usou para a implantação (pegue outra da lista do Ganache).
-Verifique se o endereço do Ganache (ethClient.Dial) corresponde ao seu ambiente (HTTP://127.0.0.1:7545).
-Inicie o servidor:
+### 4. Configurar e Iniciar o Servidor
 
-Bash
+Edite `servidor/servidor-22.go`:
 
+- Cole o endereço do contrato na variável `contractAddress`.
+- Use uma chave privada diferente da implantação para `privateKeyHex`.
+- Confirme o `ethClient.Dial` com `HTTP://127.0.0.1:7545` ou o adequado.
+
+Execute:
+
+```bash
 go run servidor/servidor-22.go
-O servidor estará rodando e pronto para receber requisições na porta :8083.
+```
 
-5. Configurar e Executar os Clientes
-Verifique a URL do servidor nos clientes:
+Servidor na porta `:8083`.
 
-Em clientePosto/cliente-posto.go e clienteVeiculo/cliente.go, confirme que a variável servidorBackendURL está apontando para o endereço correto do seu servidor (ex: "http://127.0.0.1:8083").
-Execute os clientes em terminais separados:
+para rodar outros servidores é necessario mudar a porta, 8083,8084,8085 etc.
 
-Para cadastrar um novo posto:
+### 5. Configurar e Executar os Clientes
 
-Bash
+Verifique `servidorBackendURL` em:
 
+- `clientePosto/cliente-posto.go`
+- `clienteVeiculo/cliente.go`
+
+Execute os clientes:
+
+```bash
+# Cliente de Posto
 go run clientePosto/cliente-posto.go
-Siga as instruções no terminal para inserir os dados do posto.
 
-Para simular um usuário de VE:
-
-Bash
-
+# Cliente de Veículo
 go run clienteVeiculo/cliente.go
-Utilize o menu interativo para cadastrar um veículo, consultar postos e fazer reservas.
+```
+
+---
+
+
+
