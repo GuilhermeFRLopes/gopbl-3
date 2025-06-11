@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"math"
 
@@ -47,12 +48,21 @@ type Veiculo struct {
 var veiculo Veiculo
 var cadastrado bool = false
 var idPostosReservados []string
+var servidorBackendURL string // URL do seu servidor Go
 
-// var servidorBackendURL string = "http://127.0.0.1:8083" // URL do seu servidor Go
-var servidorBackendURL string = "http://192.168.0.110:8083" // URL do seu servidor Go
+// var servidorBackendURL string = "http://192.168.0.110:8083" // URL do seu servidor Go
 // 192.168.0.110
 
 func main() {
+	// Definição dos flags para o endereço do servidor
+	serverIP := flag.String("ip", "127.0.0.1", "IP do servidor backend")
+	serverPort := flag.String("port", "8083", "Porta do servidor backend")
+	flag.Parse()
+
+	// Constrói a URL do backend
+	servidorBackendURL = fmt.Sprintf("http://%s:%s", *serverIP, *serverPort)
+	fmt.Printf("Conectando ao servidor backend em: %s\n", servidorBackendURL)
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
@@ -329,6 +339,23 @@ func distanciaHaversine(lat1, lon1, lat2, lon2 float64) float64 {
 	return distancia
 }
 
+func alterarServidorBackend() {
+	var novoIP, novaPorta string
+
+	fmt.Printf("Servidor backend atual: %s\n", servidorBackendURL)
+	fmt.Print("Digite o novo IP do servidor: ")
+	fmt.Scanln(&novoIP)
+	fmt.Print("Digite a nova porta do servidor: ")
+	fmt.Scanln(&novaPorta)
+
+	if novoIP != "" && novaPorta != "" {
+		servidorBackendURL = fmt.Sprintf("http://%s:%s", novoIP, novaPorta)
+		fmt.Printf("Servidor backend alterado para: %s\n", servidorBackendURL)
+	} else {
+		fmt.Println("Entrada inválida. O endereço do servidor não foi alterado.")
+	}
+}
+
 func menu() {
 	for {
 		fmt.Println("\nMenu de Ações:")
@@ -337,6 +364,7 @@ func menu() {
 		fmt.Println("3 - Consultar postos disponíveis")
 		fmt.Println("4 - Reservar posto")
 		fmt.Println("5 - Finalizar viagem")
+		fmt.Println("6 - Alterar servidor backend")
 		//fmt.Println("6 - Sair") // Removida opção de servidor preferido, pois não é mais relevante no cliente para este cenário
 		var opcao int
 		fmt.Print("Escolha uma opção: ")
@@ -379,6 +407,8 @@ func menu() {
 			} else {
 				fmt.Println("Você não possui reservas ativas para finalizar.")
 			}
+		case 6:
+			alterarServidorBackend()
 		//case 6:
 		// Lógica de encerramento já está na goroutine do sinal
 		//return

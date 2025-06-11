@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"flag"
 	"fmt"
 	blockchain_contracts "gopbl-3/contratos"
 	"log"
@@ -48,6 +49,10 @@ var privateKey *ecdsa.PrivateKey
 var fromAddress common.Address
 
 func main() {
+	// Definição do flag para a porta
+	port := flag.String("port", "8083", "Porta para o servidor HTTP rodar")
+	flag.Parse()
+
 	if err := conectarEthereum(); err != nil {
 		log.Fatalf("Erro fatal ao conectar ao Ethereum: %v", err)
 	}
@@ -72,8 +77,9 @@ func main() {
 	router.PUT("/reservar", editarPostoHandler)
 
 	//Iniciar Servidor HTTP
-	fmt.Println("Servidor Gin HTTP iniciado na porta :8083")
-	router.Run(":8083")
+	addr := fmt.Sprintf(":%s", *port)
+	fmt.Printf("Servidor Gin HTTP iniciado na porta %s\n", addr)
+	router.Run(addr)
 }
 
 func conectarEthereum() error {
