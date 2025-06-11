@@ -1,6 +1,9 @@
 # Variáveis de configuração
-SERVER_IP   ?= 127.0.0.1
-SERVER_PORT ?= 8083
+IP   ?= 127.0.0.1
+PORT ?= 8083
+
+ganache:
+	ganache --deterministic --accounts 10 --miner.blockTime 1
 
 iniciarGeral:
 	@echo "Compilando contrato Solidity e gerando Go bindings..."
@@ -9,22 +12,21 @@ iniciarGeral:
 	@echo "Contrato compilado com sucesso!"
 
 run-server:
-	@echo "Iniciando o servidor na porta ${SERVER_PORT}..."
-	@go run servidor/servidor-22.go --port=${SERVER_PORT}
+	@echo "Iniciando o servidor na porta ${PORT}..."
+	@go run servidor/servidor-22.go --port=${PORT}
 
 run-client-veiculo:
-	@echo "Iniciando cliente de veículo, conectando a ${SERVER_IP}:${SERVER_PORT}..."
-	@go run clienteVeiculo/cliente.go --ip=${SERVER_IP} --port=${SERVER_PORT}
+	@echo "Iniciando cliente de veículo, conectando a ${IP}:${PORT}..."
+	@go run clienteVeiculo/cliente.go --ip=${IP} --port=${PORT}
 
 run-client-posto:
-	@echo "Iniciando cliente de posto, conectando a ${SERVER_IP}:${SERVER_PORT}..."
-	@go run clientePosto/cliente-posto.go --ip=${SERVER_IP} --port=${SERVER_PORT}
+	@echo "Iniciando cliente de posto, conectando a ${IP}:${PORT}..."
+	@go run clientePosto/cliente-posto.go --ip=${IP} --port=${PORT}
 
 deploy-contract:
 	@echo "Implantando o contrato..."
 	@go run deploy_contract.go
 
-.PHONY: iniciarGeral run-server run-client-veiculo run-client-posto deploy-contract
 
 # --- INSTRUÇÕES DE USO ---
 # 1. Inicie sua blockchain local (ex: Ganache)
