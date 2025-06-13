@@ -125,7 +125,10 @@ para rodar outros servidores é necessario mudar a porta, 8083,8084,8085 etc.
 
 De outra maneira, os servidores também podem ser executados pelo makefile:
 ```bash
-# Para que isso funcione corretamente, as variáveis KEY1, KEY2 e KEY3, além de PORT1, PORT2 e PORT3 devem ser alteradas no próprio makefile, as quais devem ser especificadas chaves privadas e portas diferentes. Feito isso, os seguintes comandos podem ser executados:
+# Para que isso funcione corretamente, as variáveis KEY1, KEY2 e KEY3,
+# além de PORT1, PORT2 e PORT3 devem ser alteradas no próprio makefile,
+# as quais devem ser especificadas chaves privadas e portas diferentes.
+# Feito isso, os seguintes comandos podem ser executados:
 
     make run-server1
     make run-server2
