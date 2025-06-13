@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log" // Adicionado para logs
 	"net/http"
@@ -24,9 +25,20 @@ type Posto struct {
 }
 
 var posto_criado Posto
-var servidorBackendURL string = "http://192.168.0.110:8083"
-//192.168.0.110
+var servidorBackendURL string
+
+// var servidorBackendURL string = "http://192.168.0.110:8083"
+// 192.168.0.110
 func main() {
+	// Definição dos flags para o endereço do servidor
+	serverIP := flag.String("ip", "127.0.0.1", "IP do servidor backend")
+	serverPort := flag.String("port", "8083", "Porta do servidor backend")
+	flag.Parse()
+
+	// Constrói a URL do backend
+	servidorBackendURL = fmt.Sprintf("http://%s:%s", *serverIP, *serverPort)
+	fmt.Printf("Conectando ao servidor backend em: %s\n", servidorBackendURL)
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 

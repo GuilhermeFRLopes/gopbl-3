@@ -78,7 +78,10 @@ Aplicações de linha de comando que simulam a interação de usuários e empres
 ganache
 ```
 
-Anote uma das chaves privadas exibidas. O Ganache estará rodando em `http://127.0.0.1:8545`, é necessário ajustar o ganache para rodar em `http://0.0.0.0:8545` no laboratorio.
+Anote uma das chaves privadas exibidas. O Ganache estará rodando em `http://127.0.0.1:7545`, é necessário ajustar o ganache para rodar em `http://0.0.0.0:7545` no laboratorio. Lembrando que o endereço `http://0.0.0.0:7545`, em caso de rodar um servidor na mesma máquina onde o ganache está rodando. Caso deseje rodar o servidor em outra máquina, a qual o ganache não está presente, é necessário ajustar o endereço para `http://(endereço de ip da máquina onde o ganache está rodando):7545`.
+
+Por exemplo, se o ganache for iniciado na máquina com endereço `172.16.201.11`, então os ip's de destino do ganhace dos servidores que estão rodando em outras máquinas devem ser 
+`http://127.0.0.1:7545`. Isso é definido na função 'conectarEthereum' que os servidores contém.
 
 ### 2. Compilar o Smart Contract e Gerar o Binding
 
@@ -120,6 +123,15 @@ Servidor na porta `:8083`.
 
 para rodar outros servidores é necessario mudar a porta, 8083,8084,8085 etc.
 
+De outra maneira, os servidores também podem ser executados pelo makefile:
+```bash
+# Para que isso funcione corretamente, as variáveis KEY1, KEY2 e KEY3, além de PORT1, PORT2 e PORT3 devem ser alteradas no próprio makefile, as quais devem ser especificadas chaves privadas e portas diferentes. Feito isso, os seguintes comandos podem ser executados:
+
+    make run-server1
+    make run-server2
+    make run-server3
+```
+
 ### 5. Configurar e Executar os Clientes
 
 Verifique `servidorBackendURL` em:
@@ -133,8 +145,17 @@ Execute os clientes:
 # Cliente de Posto
 go run clientePosto/cliente-posto.go
 
+
 # Cliente de Veículo
 go run clienteVeiculo/cliente.go
+```
+ De outra maneira, os clientes também podem ser executados pelo makefile:
+```bash
+# Deve ser especificado o IP e a porta do servidor que deseja se conectar.
+make run-client-veiculo IP=192.168.0.10 PORT=8084 
+
+
+make run-client-posto IP=192.168.0.10 PORT=8084
 ```
 
 ---

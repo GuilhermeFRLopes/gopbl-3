@@ -9,8 +9,7 @@ import (
 	"math/big"
 	"os"
 
-	// Adicione esta importação se não estiver lá
-	abi_contracts "gopbl-3/contratos" // Ajuste para o caminho real do arquivo Go gerado pelo abigen
+	abi_contracts "gopbl-3/contratos"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -25,7 +24,7 @@ func main() {
 		// Se a variável de ambiente não estiver definida, use uma chave privada de uma conta do Ganache diretamente AQUI para teste
 		// EXTREMAMENTE IMPORTANTE: NUNCA FAÇA ISSO COM CHAVES DE PRODUÇÃO.
 		// Para teste local, é aceitável para conveniência.
-		privateKeyHex = "e35fbc3542983a864ed568695de81f3c4362764d5926aa490d49a7ae3165c715" // Ex: 4f3edf983ad256c709e6a10f1723ad2eeaec49c9fda382894563704043b075ff
+		privateKeyHex = "916d9c4d2e120c63c3f4ed89a2210e281d411b8222031f6b36dd7afef2ba4ba0" // Ex: 4f3edf983ad256c709e6a10f1723ad2eeaec49c9fda382894563704043b075ff
 		log.Println("Usando chave privada diretamente no código para teste local. Use variáveis de ambiente em produção!")
 	}
 

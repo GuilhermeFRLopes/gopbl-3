@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"flag"
 	"fmt"
 	blockchain_contracts "gopbl-3/contratos"
 	"log"
@@ -46,15 +47,21 @@ var contractInstance *blockchain_contracts.Contratos
 var contractAddress common.Address
 var privateKey *ecdsa.PrivateKey
 var fromAddress common.Address
+var key *string
 
 func main() {
+	// Definição do flag para a porta
+	port := flag.String("port", "8083", "Porta para o servidor HTTP rodar")
+	key = flag.String("key", "90e07a66a636fb06099e14d6ba1aa7d424d6285cdab07e6337e16e3afc2a010d", "Chave privada para o servidor")
+	flag.Parse()
+
 	if err := conectarEthereum(); err != nil {
 		log.Fatalf("Erro fatal ao conectar ao Ethereum: %v", err)
 	}
 	fmt.Println("Conectado ao Ethereum com sucesso!")
 
 	//numero do contrato
-	contractAddress = common.HexToAddress("Ef8F65612B109E927f23fc654f8EF3FE8601DC72")
+	contractAddress = common.HexToAddress("3ce04D71105EC25a855F3b1F2156e36B710c40AA")
 	// Se usar variáveis de ambiente
 	// contractAddress = common.HexToAddress(os.Getenv("CONTRACT_ADDRESS"))
 
@@ -72,14 +79,15 @@ func main() {
 	router.PUT("/reservar", editarPostoHandler)
 
 	//Iniciar Servidor HTTP
-	fmt.Println("Servidor Gin HTTP iniciado na porta :8083")
-	router.Run(":8083")
+	addr := fmt.Sprintf(":%s", *port)
+	fmt.Printf("Servidor Gin HTTP iniciado na porta %s\n", addr)
+	router.Run(addr)
 }
 
 func conectarEthereum() error {
 	var err error
 	// Conecta ao Ganache local
-	ethClient, err = ethclient.Dial("HTTP://127.0.0.1:7545") //endereço do ganache
+	ethClient, err = ethclient.Dial("HTTP://0.0.0.0:7545") //endereço do ganache
 	if err != nil {
 		return fmt.Errorf("falha ao conectar ao Ethereum (Ganache): %v", err)
 	}
@@ -87,8 +95,8 @@ func conectarEthereum() error {
 	// Carregar a chave privada da conta do Ganache
 	// Lembre-se de que essa chave deve ser de uma das contas pré-financiadas do SEU Ganache
 	//tem que mudar a chave toda hora que abrir o ganache
-	privateKeyHex := "4d158b3c2a6dbeff6fa06b8e4c8c3f4125f41fdfc7601b5459bdad77f9c0b677"
-	privateKey, err = crypto.HexToECDSA(privateKeyHex)
+	// privateKeyHex := "bf8156e722a95245ffec2b41293df6f85d2f3d2b0ae39e839894479d25a7b19a"
+	privateKey, err = crypto.HexToECDSA(*key)
 	if err != nil {
 		return fmt.Errorf("falha ao carregar chave privada: %v", err)
 	}
